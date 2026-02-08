@@ -76,7 +76,7 @@ pub fn build_csr(num_nodes: usize, edges: Vec<(usize, usize)>) -> Graph {
 
 /// Loads a graph from a text file.
 ///
-/// Format: first line is `num_nodes`; each following line is `src dst` (one edge per line).
+/// Format: each line is `src dst` (one edge per line). Empty lines and lines starting with `//` or `#` are skipped. Node count is inferred as max node id + 1.
 /// Returns `Err` on I/O or parse errors.
 pub fn load_graph_from_file(path: &str) -> Result<Graph> {
     let file = File::open(path).context("Failed to open file")?;

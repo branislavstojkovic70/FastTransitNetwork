@@ -1,5 +1,7 @@
 use crate::graph::graph::Graph;
 use super::union_find::UnionFind;
+use super::atomic_union_find::AtomicUnionFind;
+use rayon::prelude::*;
 
 /// Sequential WCC: finds weakly connected components (treats graph as undirected).
 pub fn wcc_sequential(graph: &Graph) -> Vec<usize> {
@@ -68,4 +70,26 @@ impl WccStats {
             }
         }
     }
+}
+
+/// Parallel WCC using AtomicUnionFind; falls back to sequential for small graphs.
+pub fn wcc_parallel(graph: &Graph, num_threads: usize) -> Vec<usize> {
+    const THRESHOLD: usize = 100_000;
+    if graph.num_nodes < THRESHOLD {
+        return wcc_sequential(graph);
+    }
+
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .expect("rayon thread pool")
+        .install(|| {
+            let uf = AtomicUnionFind::new(graph.num_nodes);
+            (0..graph.num_nodes).into_par_iter().for_each(|u| {
+                for &v in graph.neighbors(u) {
+                    uf.union(u, v);
+                }
+            });
+            uf.get_components()
+        })
 }
