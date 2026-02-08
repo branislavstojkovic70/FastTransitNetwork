@@ -1,3 +1,6 @@
+use anyhow::{Context, Result};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 pub struct Graph {
     pub num_nodes: usize,
     pub num_edges: usize,
@@ -60,4 +63,41 @@ pub fn build_csr(num_nodes: usize, edges: Vec<(usize, usize)>) -> Graph {
     }
     
     graph
+}
+
+/// Loads a graph from a text file.
+///
+/// Format: first line is `num_nodes`; each following line is `src dst` (one edge per line).
+/// Returns `Err` on I/O or parse errors.
+pub fn load_graph_from_file(path: &str) -> Result<Graph> {
+    let file = File::open(path).context("Failed to open file")?;
+    let reader = BufReader::new(file);
+    
+    let mut edges = Vec::new();
+    let mut max_id = 0;
+    
+    for line in reader.lines() {
+        let line = line?;
+        let line = line.trim();
+        
+        if line.is_empty() || line.starts_with("//") || line.starts_with("#") {
+            continue;
+        }
+        
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        
+        let src: usize = parts[0].parse()
+            .context(format!("Invalid source: {}", parts[0]))?;
+        let dst: usize = parts[1].parse()
+            .context(format!("Invalid dest: {}", parts[1]))?;
+        
+        max_id = max_id.max(src).max(dst);
+        edges.push((src, dst));
+    }
+    
+    let num_nodes = max_id + 1;
+    Ok(build_csr(num_nodes, edges))
 }

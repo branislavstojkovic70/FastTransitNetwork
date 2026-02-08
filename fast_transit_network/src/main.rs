@@ -1,20 +1,19 @@
 mod graph;
-
+mod algorithms;
 use graph::*;
+use algorithms::*;
 
-fn main() {
-    let edges = vec![
-        (0, 1),
-        (0, 2),
-        (1, 2),
-        (1, 3),
-    ];
-    
-    let graph = build_csr(4, edges);
-    graph.print_info();
-    
-    println!("\nNeighbors of each node:");
-    for v in 0..graph.num_nodes {
-        println!("  Node {}: {:?}", v, graph.neighbors(v));
+fn main() {    
+    match load_graph_from_file("test_graph.txt") {
+        Ok(graph) => {
+            graph.print_info();
+            
+            let source = 0;
+            let dist = bfs_sequential(&graph, source);
+            print_bfs_result(&dist, source);
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+        }
     }
 }
