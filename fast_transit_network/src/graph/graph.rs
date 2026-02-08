@@ -20,7 +20,11 @@ impl Graph {
         }
     }
     
+    /// Returns the slice of out-neighbors of node `v`; empty if `v` is out of range.
     pub fn neighbors(&self, v: usize) -> &[usize] {
+        if v >= self.num_nodes {
+            return &self.neighbors[0..0];
+        }
         &self.neighbors[self.offsets[v]..self.offsets[v + 1]]
     }
     
@@ -32,7 +36,12 @@ impl Graph {
         println!("Graph Info:");
         println!("  Nodes: {}", self.num_nodes);
         println!("  Edges: {}", self.num_edges);
-        println!("  Avg degree: {:.2}", self.num_edges as f64 / self.num_nodes as f64);
+        let avg = if self.num_nodes == 0 {
+            0.0
+        } else {
+            self.num_edges as f64 / self.num_nodes as f64
+        };
+        println!("  Avg degree: {:.2}", avg);
     }
 }
 
