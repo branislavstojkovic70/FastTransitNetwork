@@ -3,7 +3,6 @@ use crate::utils::io::{write_pagerank_result, write_pagerank_stats, write_pagera
 use anyhow::Result;
 use rayon::prelude::*;
 
-/// PageRank parameters: damping factor, iteration limit, and convergence tolerance.
 pub struct PageRankConfig {
     pub alpha: f64,
     pub max_iterations: usize,
@@ -20,7 +19,6 @@ impl Default for PageRankConfig {
     }
 }
 
-/// Sequential PageRank: returns a probability vector over nodes (sum ≈ 1). Stops when L1 change is below tolerance or max iterations reached.
 pub fn pagerank_sequential(graph: &Graph, config: &PageRankConfig) -> Vec<f64> {
     let n = graph.num_nodes;
     if n == 0 {
@@ -79,21 +77,117 @@ pub fn pagerank_sequential(graph: &Graph, config: &PageRankConfig) -> Vec<f64> {
     rank
 }
 
-/// Prints PageRank statistics (sum, min, max, mean) and top 10 nodes by rank.
+pub fn pagerank_parallel(
+    graph: &Graph,
+    config: &PageRankConfig,
+    num_threads: usize,
+) -> Vec<f64> {
+    const THRESHOLD: usize = 10_000;
+    if graph.num_nodes < THRESHOLD {
+        return pagerank_sequential(graph, config);
+    }
+
+    let actual_threads = num_threads.min(8);
+    let n = graph.num_nodes;
+    let min_chunk = n / actual_threads; 
+
+    let initial_value = 1.0 / n as f64;
+    let mut rank = vec![initial_value; n];
+    let mut new_rank = vec![0.0; n];
+    let teleport = (1.0 - config.alpha) / n as f64;
+
+    let sink_nodes: Vec<usize> = (0..n)
+        .filter(|&u| graph.out_degree[u] == 0)
+        .collect();
+
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(actual_threads)
+        .build()
+        .expect("rayon pool")
+        .install(|| {
+    for iteration in 0..config.max_iterations {
+        let sink_sum: f64 = sink_nodes.par_iter().map(|&u| rank[u]).sum();
+        let sink_contribution = config.alpha * sink_sum / n as f64;
+        let base_rank = teleport + sink_contribution;
+
+        let contributions = (0..n)
+            .into_par_iter()
+            .with_min_len(min_chunk.max(1)) 
+            .fold(
+                || vec![0.0; n],
+                |mut local_rank, u| {
+                    let neighbors = graph.neighbors(u);
+                    if !neighbors.is_empty() {
+                        let contribution = config.alpha * rank[u] / neighbors.len() as f64;
+                        for &v in neighbors {
+                            local_rank[v] += contribution;
+                        }
+                    }
+                    local_rank
+                }
+            )
+            .reduce(
+                || vec![0.0; n],
+                |mut acc, local| {
+                    acc.par_iter_mut()
+                        .zip(local.par_iter())
+                        .for_each(|(a, &l)| *a += l);
+                    acc
+                }
+            );
+
+        new_rank
+            .par_iter_mut()
+            .zip(contributions.par_iter())
+            .for_each(|(r, &c)| {
+                *r = base_rank + c;
+            });
+
+        let delta: f64 = rank
+            .par_iter()
+            .zip(new_rank.par_iter())
+            .map(|(old, new)| (old - new).abs())
+            .sum();
+
+        std::mem::swap(&mut rank, &mut new_rank);
+
+        if delta < config.tolerance {
+            println!(
+                "PageRank converged after {} iterations (delta: {:.2e})",
+                iteration + 1,
+                delta
+            );
+            break;
+        }
+
+        if iteration == config.max_iterations - 1 {
+            println!(
+                "PageRank reached max iterations without convergence (delta: {:.2e})",
+                delta
+            );
+        }
+    }
+
+    rank
+    })
+}
+
+pub fn pagerank_parallel_optimized(
+    graph: &Graph,
+    config: &PageRankConfig,
+    num_threads: usize,
+) -> Vec<f64> {
+    pagerank_parallel(graph, config, num_threads)
+}
+
 pub fn pagerank_stats(ranks: &[f64]) {
     if ranks.is_empty() {
         return;
     }
 
     let sum: f64 = ranks.iter().sum();
-    let min = ranks
-        .iter()
-        .cloned()
-        .fold(f64::INFINITY, f64::min);
-    let max = ranks
-        .iter()
-        .cloned()
-        .fold(f64::NEG_INFINITY, f64::max);
+    let min = ranks.iter().cloned().fold(f64::INFINITY, f64::min);
+    let max = ranks.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let mean = sum / ranks.len() as f64;
 
     println!("PageRank Statistics:");
@@ -115,158 +209,6 @@ pub fn pagerank_stats(ranks: &[f64]) {
     }
 }
 
-/// Parallel PageRank; falls back to sequential for small graphs.
-pub fn pagerank_parallel(
-    graph: &Graph,
-    config: &PageRankConfig,
-    num_threads: usize,
-) -> Vec<f64> {
-    const THRESHOLD: usize = 10_000;
-    if graph.num_nodes < THRESHOLD {
-        return pagerank_sequential(graph, config);
-    }
-
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(num_threads)
-        .build()
-        .expect("rayon thread pool")
-        .install(|| {
-            let n = graph.num_nodes;
-            let initial_value = 1.0 / n as f64;
-            let mut rank = vec![initial_value; n];
-            let mut new_rank = vec![0.0; n];
-            let teleport = (1.0 - config.alpha) / n as f64;
-
-            for iteration in 0..config.max_iterations {
-                new_rank.par_iter_mut().for_each(|r| *r = teleport);
-
-                let contributions: Vec<Vec<(usize, f64)>> = (0..n)
-                    .into_par_iter()
-                    .map(|u| {
-                        let neighbors = graph.neighbors(u);
-                        let mut local_contributions = Vec::new();
-                        if neighbors.is_empty() {
-                            let contribution = config.alpha * rank[u] / n as f64;
-                            for v in 0..n {
-                                local_contributions.push((v, contribution));
-                            }
-                        } else {
-                            let contribution = config.alpha * rank[u] / neighbors.len() as f64;
-                            for &v in neighbors {
-                                local_contributions.push((v, contribution));
-                            }
-                        }
-                        local_contributions
-                    })
-                    .collect();
-
-                for local_contribs in contributions {
-                    for (v, contrib) in local_contribs {
-                        new_rank[v] += contrib;
-                    }
-                }
-
-                let delta: f64 = rank
-                    .par_iter()
-                    .zip(new_rank.par_iter())
-                    .map(|(old, new)| (*old - *new).abs())
-                    .sum();
-
-                std::mem::swap(&mut rank, &mut new_rank);
-
-                if delta < config.tolerance {
-                    println!(
-                        "PageRank converged after {} iterations (delta: {:.2e})",
-                        iteration + 1,
-                        delta
-                    );
-                    break;
-                }
-                if iteration == config.max_iterations - 1 {
-                    println!(
-                        "PageRank reached max iterations without convergence (delta: {:.2e})",
-                        delta
-                    );
-                }
-            }
-
-            rank
-        })
-}
-
-/// Parallel PageRank using per-element mutexes for in-place updates (no intermediate Vec of contributions).
-pub fn pagerank_parallel_optimized(
-    graph: &Graph,
-    config: &PageRankConfig,
-    num_threads: usize,
-) -> Vec<f64> {
-    use std::sync::Mutex;
-
-    const THRESHOLD: usize = 10_000;
-    if graph.num_nodes < THRESHOLD {
-        return pagerank_sequential(graph, config);
-    }
-
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(num_threads)
-        .build()
-        .expect("rayon thread pool")
-        .install(|| {
-            let n = graph.num_nodes;
-            let initial_value = 1.0 / n as f64;
-            let mut rank = vec![initial_value; n];
-            let mut new_rank = vec![0.0; n];
-            let teleport = (1.0 - config.alpha) / n as f64;
-
-            for iteration in 0..config.max_iterations {
-                new_rank.par_iter_mut().for_each(|r| *r = teleport);
-
-                let new_rank_mutex: Vec<Mutex<f64>> = new_rank
-                    .iter()
-                    .map(|&val| Mutex::new(val))
-                    .collect();
-
-                (0..n).into_par_iter().for_each(|u| {
-                    let neighbors = graph.neighbors(u);
-                    if neighbors.is_empty() {
-                        let contribution = config.alpha * rank[u] / n as f64;
-                        for v in 0..n {
-                            *new_rank_mutex[v].lock().unwrap() += contribution;
-                        }
-                    } else {
-                        let contribution = config.alpha * rank[u] / neighbors.len() as f64;
-                        for &v in neighbors {
-                            *new_rank_mutex[v].lock().unwrap() += contribution;
-                        }
-                    }
-                });
-
-                for (i, mutex) in new_rank_mutex.iter().enumerate() {
-                    new_rank[i] = *mutex.lock().unwrap();
-                }
-
-                let delta: f64 = rank
-                    .par_iter()
-                    .zip(new_rank.par_iter())
-                    .map(|(old, new)| (*old - *new).abs())
-                    .sum();
-
-                std::mem::swap(&mut rank, &mut new_rank);
-
-                if delta < config.tolerance {
-                    println!(
-                        "PageRank converged after {} iterations (delta: {:.2e})",
-                        iteration + 1,
-                        delta
-                    );
-                    break;
-                }
-            }
-
-            rank
-        })
-}
-
 pub fn run_pagerank_and_save(
     graph: &Graph,
     config: &PageRankConfig,
@@ -280,13 +222,11 @@ pub fn run_pagerank_and_save(
     
     let ranks = match mode {
         "seq" => pagerank_sequential(graph, config),
-        "par" => pagerank_parallel(graph, config, num_threads),
-        "par-opt" => pagerank_parallel_optimized(graph, config, num_threads),
+        "par" | "par-opt" => pagerank_parallel(graph, config, num_threads),
         _ => return Err(anyhow::anyhow!("Invalid mode: {}", mode)),
     };
     
     let elapsed = start.elapsed();
-    
     println!("PageRank completed in {:?}", elapsed);
 
     write_pagerank_result(&ranks, output_path)?;
