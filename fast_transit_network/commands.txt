@@ -69,6 +69,24 @@ python scripts/visualize_benchmark.py scripts/results/benchmark_results.csv
 # Plots and tables: scripts/results/plots/
 
 ================================================================================
+6. Tests
+================================================================================
+
+# Fast (default): only quick tests, ~50 tests, a few seconds
+cargo test
+
+# Full: include slow seq-vs-par tests on large graph (~100k nodes), 4 extra tests
+cargo test -- --include-ignored
+
+# Faster execution: run tests in release mode (slower compile, quicker run for big tests)
+cargo test --release
+cargo test --release -- --include-ignored
+
+# Run only tests matching a name
+cargo test bfs_
+cargo test pagerank
+
+================================================================================
 Optional
 ================================================================================
 
