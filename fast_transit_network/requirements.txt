@@ -1,0 +1,4 @@
+# For scripts/visualize_benchmark.py (and future plotting scripts)
+pandas>=2.0
+matplotlib>=3.7
+tabulate>=0.9  # required by pandas to_markdown()

@@ -2,7 +2,7 @@
 name = "fast_transit_network"
 version = "0.1.0"
 edition = "2024"
-default-run = "fast_transit_network"
+default-run = "tool"
 
 [[bin]]
 name = "tool"

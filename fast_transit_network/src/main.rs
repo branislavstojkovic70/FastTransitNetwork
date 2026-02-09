@@ -98,15 +98,16 @@ fn benchmark_pagerank(graph_path: &str) {
 
 fn main() {
     let graphs = vec![
-        "test_graph.txt",
         "scripts/data/small/random_1k.txt",
         "scripts/data/medium/random_100k.txt",
         "scripts/data/heavy/random_100m.txt",
     ];
-    
+
     for graph in graphs {
         if std::path::Path::new(graph).exists() {
             benchmark_pagerank(graph);
+        } else {
+            println!("Skipping {} (file not found)", graph);
         }
     }
 }

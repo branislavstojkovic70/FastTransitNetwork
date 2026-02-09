@@ -1,0 +1,79 @@
+# FastTransitNetwork – CLI commands (usage order)
+
+Run all commands from: fast_transit_network/
+
+================================================================================
+1. ONE-TIME – environment setup
+================================================================================
+
+# Rust: build
+cargo build --release
+
+# Python (for benchmark visualization): venv + dependencies
+# On Debian/Ubuntu if venv fails: sudo apt install python3.12-venv
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+================================================================================
+2. Generate graphs (input data for algorithms)
+================================================================================
+
+# From fast_transit_network/:
+cd scripts && python3 generate_graphs.py
+
+# Creates: scripts/data/small/, scripts/data/medium/, scripts/data/large/, scripts/data/heavy/
+# (random_1k.txt, random_100k.txt, etc.)
+
+================================================================================
+3. Help and individual algorithms
+================================================================================
+
+# Help
+cargo run --release -- --help
+./target/release/tool --help
+
+# BFS
+cargo run --release -- bfs --input scripts/data/small/random_1k.txt --source 0 --mode seq --out bfs_seq.txt
+cargo run --release -- bfs --input scripts/data/small/random_1k.txt --source 0 --mode par --threads 8 --out bfs_par.txt
+
+# WCC
+cargo run --release -- wcc --input scripts/data/small/random_1k.txt --mode seq --out wcc_seq.txt
+cargo run --release -- wcc --input scripts/data/small/random_1k.txt --mode par --threads 8 --out wcc_par.txt
+
+# PageRank
+cargo run --release -- pagerank --input scripts/data/small/random_1k.txt --mode seq --out pr_seq.txt --alpha 0.85 --iters 50 --eps 1e-10
+cargo run --release -- pagerank --input scripts/data/small/random_1k.txt --mode par --threads 8 --out pr_par.txt --alpha 0.85 --iters 50 --eps 1e-10
+cargo run --release -- pagerank --input scripts/data/medium/random_100k.txt --mode par-opt --threads 8 --out pr_par_opt.txt
+
+================================================================================
+4. Benchmark (all algorithms, multiple thread counts)
+================================================================================
+
+# Small graph (fast)
+cargo run --release -- benchmark --input scripts/data/small/random_1k.txt --threads 2,4,8,16
+
+# Medium / large (after step 2)
+cargo run --release -- benchmark --input scripts/data/medium/random_100k.txt --threads 2,4,8,16
+cargo run --release -- benchmark --input scripts/data/heavy/random_100m.txt --threads 2,4,8,16
+
+# CSV is written to: scripts/results/benchmark_results.csv (use --out for a different path)
+
+================================================================================
+5. Visualize benchmark results
+================================================================================
+
+# Activate venv if not already (source .venv/bin/activate), then:
+python scripts/visualize_benchmark.py scripts/results/benchmark_results.csv
+
+# Plots and tables: scripts/results/plots/
+
+================================================================================
+Optional
+================================================================================
+
+# PageRank-only benchmark (separate binary, uses data/small, data/medium, data/heavy)
+cargo run --release --bin fast_transit_network
+
+# Call the binary directly (instead of cargo run)
+./target/release/tool benchmark --input scripts/data/small/random_1k.txt --threads 2,4,8,16

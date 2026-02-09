@@ -1,0 +1,16 @@
+algorithm,graph_name,nodes,edges,mode,threads,time_ms,speedup,correct
+BFS,random_100k,100000,500000,seq,1,8.235648,1.0000,true
+BFS,random_100k,100000,500000,par,2,13.234838,0.6223,true
+BFS,random_100k,100000,500000,par,4,8.660285,0.9510,true
+BFS,random_100k,100000,500000,par,8,7.905856,1.0417,true
+BFS,random_100k,100000,500000,par,16,8.450900,0.9745,true
+WCC,random_100k,100000,500000,seq,1,12.300428,1.0000,true
+WCC,random_100k,100000,500000,par,2,6.098985,2.0168,true
+WCC,random_100k,100000,500000,par,4,2.947244,4.1735,true
+WCC,random_100k,100000,500000,par,8,2.095875,5.8689,true
+WCC,random_100k,100000,500000,par,16,4.391079,2.8012,true
+PageRank,random_100k,100000,500000,seq,1,369.421689,1.0000,true
+PageRank,random_100k,100000,500000,par,2,3702.150543,0.0998,true
+PageRank,random_100k,100000,500000,par,4,3099.350379,0.1192,true
+PageRank,random_100k,100000,500000,par,8,3680.673706,0.1004,true
+PageRank,random_100k,100000,500000,par,16,3551.856724,0.1040,true

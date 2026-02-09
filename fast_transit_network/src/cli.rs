@@ -92,5 +92,9 @@ pub enum Commands {
         /// Thread counts to test (comma-separated)
         #[arg(short, long, default_value = "2,4,8,16")]
         threads: String,
+        
+        /// Output CSV path for benchmark results (default: scripts/results/benchmark_results.csv)
+        #[arg(short, long, default_value = "scripts/results/benchmark_results.csv")]
+        out: String,
     },
 }

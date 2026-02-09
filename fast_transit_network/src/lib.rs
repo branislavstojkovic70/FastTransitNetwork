@@ -12,6 +12,7 @@ pub mod algorithms {
 
 pub mod utils {
     pub mod io;
+    pub mod benchmark;
 }
 
 pub mod cli;
