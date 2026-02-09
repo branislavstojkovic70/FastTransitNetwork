@@ -3,8 +3,9 @@
 debug
 target
 
-# Generated graph data (large files)
-fast_transit_network/scripts/data/
+# Generated graph data (large/heavy only; small/ and medium/ are tracked)
+fast_transit_network/scripts/data/heavy/
+fast_transit_network/scripts/data/large/
 
 # Python venv (for scripts that need pandas/matplotlib)
 .venv
