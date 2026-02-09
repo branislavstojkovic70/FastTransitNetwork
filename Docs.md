@@ -3,7 +3,7 @@
 **Predmet:** Paralelni i distribuirani algoritmi i jezici (PDAJ)  
 **Akademska godina:** 2025/26  
 **Student:** Branislav Stojković  
-**Broj indeksa:** SV64/2020
+**Broj indeksa:** SV64/2025
 **Datum:** 09.02.2026.
 
 ---
