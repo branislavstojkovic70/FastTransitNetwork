@@ -1,5 +1,6 @@
 mod graph;
 mod algorithms;
+mod utils; 
 
 use graph::graph::load_graph_from_file;
 use algorithms::wcc::{wcc_sequential, wcc_parallel, wcc_stats};

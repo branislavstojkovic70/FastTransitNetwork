@@ -1,4 +1,5 @@
 use crate::graph::graph::Graph;
+use crate::utils::io::write_wcc_result;
 use super::union_find::UnionFind;
 use super::atomic_union_find::AtomicUnionFind;
 use rayon::prelude::*;
@@ -92,4 +93,37 @@ pub fn wcc_parallel(graph: &Graph, num_threads: usize) -> Vec<usize> {
             });
             uf.get_components()
         })
+}
+
+pub fn run_wcc_and_save(
+    graph: &Graph,
+    mode: &str,
+    num_threads: usize,
+    output_path: &str,
+    stats_path: &str,
+) -> anyhow::Result<()> {
+    use std::time::Instant;
+    
+    let start = Instant::now();
+    
+    let components = match mode {
+        "seq" => wcc_sequential(graph),
+        "par" => wcc_parallel(graph, num_threads),
+        _ => return Err(anyhow::anyhow!("Invalid mode: {}", mode)),
+    };
+    
+    let elapsed = start.elapsed();
+    
+    println!("WCC completed in {:?}", elapsed);
+
+    write_wcc_result(&components, output_path)?;
+    println!("Results saved to: {}", output_path);
+
+    crate::utils::io::write_wcc_stats(&components, stats_path)?;
+    println!("Statistics saved to: {}", stats_path);
+
+    let stats = wcc_stats(&components);
+    stats.print();
+    
+    Ok(())
 }
