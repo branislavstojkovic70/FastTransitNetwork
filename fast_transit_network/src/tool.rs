@@ -1,3 +1,8 @@
+// PDAJ '25/26, FTN — Analiza grafova FastTransitNetwork
+// Ime i prezime: Branislav Stojkovic
+// Broj indeksa: 65/2025
+// Entrypoint: CLI tool (bfs, wcc, pagerank, benchmark)
+
 use clap::Parser;
 use fast_transit_network::graph::graph::load_graph_from_file;
 use fast_transit_network::algorithms::bfs::{bfs_sequential, bfs_parallel};
