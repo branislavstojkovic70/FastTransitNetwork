@@ -36,8 +36,7 @@ fn benchmark_pagerank(graph_path: &str) {
     println!("\nConfig: alpha={}, max_iter={}, tol={:.0e}", 
              config.alpha, config.max_iterations, config.tolerance);
     println!("{}", "-".repeat(70));
-    
-    // Sequential
+
     print!("Sequential PageRank... ");
     std::io::Write::flush(&mut std::io::stdout()).unwrap();
     
@@ -46,8 +45,7 @@ fn benchmark_pagerank(graph_path: &str) {
     let time_seq = start.elapsed();
     
     println!("{:?}", time_seq);
-    
-    // Parallel - basic version
+
     for num_threads in [2, 4, 8, 16, 32] {
         print!("Parallel PageRank ({} threads)... ", num_threads);
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
@@ -57,8 +55,7 @@ fn benchmark_pagerank(graph_path: &str) {
         let time_par = start.elapsed();
         
         let speedup = time_seq.as_secs_f64() / time_par.as_secs_f64();
-        
-        // Check correctness (ranks should be very close)
+
         let max_diff: f64 = ranks_seq.iter()
             .zip(ranks_par.iter())
             .map(|(a, b)| (a - b).abs())
@@ -70,8 +67,7 @@ fn benchmark_pagerank(graph_path: &str) {
         println!("{:?} | Speedup: {:.2}x | Max diff: {:.2e} | {}", 
                  time_par, speedup, max_diff, status);
     }
-    
-    // Optimized version comparison
+
     if graph.num_nodes >= 100_000 {
         println!("\n--- Optimized Version ---");
         for num_threads in [8, 16, 32] {

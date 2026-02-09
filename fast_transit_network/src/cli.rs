@@ -52,6 +52,37 @@ pub enum Commands {
         out: String,
     },
     
+    /// Run PageRank
+    Pagerank {
+        /// Input graph file (edge list format)
+        #[arg(short, long)]
+        input: String,
+        
+        /// Mode: seq, par, or par-opt
+        #[arg(short, long, default_value = "seq")]
+        mode: String,
+        
+        /// Number of threads (for parallel mode)
+        #[arg(short, long, default_value_t = 4)]
+        threads: usize,
+        
+        /// Output file path
+        #[arg(short, long)]
+        out: String,
+        
+        /// Damping factor (alpha)
+        #[arg(long, default_value_t = 0.85)]
+        alpha: f64,
+        
+        /// Maximum iterations
+        #[arg(long, default_value_t = 100)]
+        iters: usize,
+        
+        /// Convergence tolerance
+        #[arg(long, default_value_t = 1e-6)]
+        eps: f64,
+    },
+    
     /// Run benchmark on all algorithms
     Benchmark {
         /// Input graph file

@@ -7,6 +7,7 @@ pub mod algorithms {
     pub mod wcc;
     pub mod union_find;
     pub mod atomic_union_find;
+    pub mod pagerank;
 }
 
 pub mod utils {

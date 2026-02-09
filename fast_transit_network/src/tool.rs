@@ -1,10 +1,10 @@
-mod cli;
-
 use clap::Parser;
 use fast_transit_network::graph::graph::load_graph_from_file;
 use fast_transit_network::algorithms::bfs::{bfs_sequential, bfs_parallel};
 use fast_transit_network::algorithms::wcc::run_wcc_and_save;
+use fast_transit_network::algorithms::pagerank::{run_pagerank_and_save, PageRankConfig};
 use fast_transit_network::utils::io::write_bfs_result;
+use fast_transit_network::cli;
 use std::time::Instant;
 
 fn main() -> anyhow::Result<()> {
@@ -52,6 +52,27 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         
+        cli::Commands::Pagerank { input, mode, threads, out, alpha, iters, eps } => {
+            println!("Loading graph from: {}", input);
+            let graph = load_graph_from_file(&input)?;
+            graph.print_info();
+            
+            let config = PageRankConfig {
+                alpha,
+                max_iterations: iters,
+                tolerance: eps,
+            };
+            
+            println!("\nPageRank Config:");
+            println!("  Alpha: {}", config.alpha);
+            println!("  Max iterations: {}", config.max_iterations);
+            println!("  Tolerance: {:.2e}", config.tolerance);
+            
+            run_pagerank_and_save(&graph, &config, &mode, threads, &out)?;
+            
+            Ok(())
+        }
+        
         cli::Commands::Benchmark { input, threads } => {
             println!("Loading graph from: {}", input);
             let graph = load_graph_from_file(&input)?;
@@ -87,7 +108,7 @@ fn main() -> anyhow::Result<()> {
             println!("\n{}", "=".repeat(70));
             println!("WCC BENCHMARK");
             println!("{}", "=".repeat(70));
-
+            
             use fast_transit_network::algorithms::wcc::{wcc_sequential, wcc_parallel, wcc_stats};
 
             let start = Instant::now();
@@ -107,6 +128,42 @@ fn main() -> anyhow::Result<()> {
                 
                 println!("Parallel ({}): {:?} | {} components | Speedup: {:.2}x | {}", 
                          num_threads, time_par, stats_par.num_components, speedup,
+                         if correct { "OK" } else { "ERROR" });
+            }
+            
+            println!("\n{}", "=".repeat(70));
+            println!("PAGERANK BENCHMARK");
+            println!("{}", "=".repeat(70));
+            
+            use fast_transit_network::algorithms::pagerank::{pagerank_sequential, pagerank_parallel};
+            
+            let config = PageRankConfig {
+                alpha: 0.85,
+                max_iterations: 50,
+                tolerance: 1e-6,
+            };
+
+            let start = Instant::now();
+            let ranks_seq = pagerank_sequential(&graph, &config);
+            let time_seq = start.elapsed();
+            println!("Sequential: {:?}", time_seq);
+
+            for &num_threads in &thread_counts {
+                let start = Instant::now();
+                let ranks_par = pagerank_parallel(&graph, &config, num_threads);
+                let time_par = start.elapsed();
+                
+                let speedup = time_seq.as_secs_f64() / time_par.as_secs_f64();
+                
+                let max_diff: f64 = ranks_seq.iter()
+                    .zip(ranks_par.iter())
+                    .map(|(a, b)| (a - b).abs())
+                    .fold(0.0, f64::max);
+                
+                let correct = max_diff < 1e-4;
+                
+                println!("Parallel ({}): {:?} | Speedup: {:.2}x | {}", 
+                         num_threads, time_par, speedup,
                          if correct { "OK" } else { "ERROR" });
             }
             

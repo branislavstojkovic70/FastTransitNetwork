@@ -1,4 +1,6 @@
 use crate::graph::graph::Graph;
+use crate::utils::io::{write_pagerank_result, write_pagerank_stats, write_pagerank_top_nodes};
+use anyhow::Result;
 use rayon::prelude::*;
 
 /// PageRank parameters: damping factor, iteration limit, and convergence tolerance.
@@ -263,4 +265,42 @@ pub fn pagerank_parallel_optimized(
 
             rank
         })
+}
+
+pub fn run_pagerank_and_save(
+    graph: &Graph,
+    config: &PageRankConfig,
+    mode: &str,
+    num_threads: usize,
+    output_path: &str,
+) -> Result<()> {
+    use std::time::Instant;
+    
+    let start = Instant::now();
+    
+    let ranks = match mode {
+        "seq" => pagerank_sequential(graph, config),
+        "par" => pagerank_parallel(graph, config, num_threads),
+        "par-opt" => pagerank_parallel_optimized(graph, config, num_threads),
+        _ => return Err(anyhow::anyhow!("Invalid mode: {}", mode)),
+    };
+    
+    let elapsed = start.elapsed();
+    
+    println!("PageRank completed in {:?}", elapsed);
+
+    write_pagerank_result(&ranks, output_path)?;
+    println!("Results saved to: {}", output_path);
+    
+    let top_path = output_path.replace(".txt", "_top100.txt");
+    write_pagerank_top_nodes(&ranks, &top_path, 100)?;
+    println!("Top 100 nodes saved to: {}", top_path);
+    
+    let stats_path = output_path.replace(".txt", "_stats.txt");
+    write_pagerank_stats(&ranks, &stats_path)?;
+    println!("Statistics saved to: {}", stats_path);
+
+    pagerank_stats(&ranks);
+    
+    Ok(())
 }
