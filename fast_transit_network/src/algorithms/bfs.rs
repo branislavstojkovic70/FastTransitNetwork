@@ -3,9 +3,9 @@ use std::collections::VecDeque;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicI32, Ordering};
 
-/// Below this many nodes, use sequential BFS to avoid thread-pool and atomic overhead
+/// Below this many nodes, use sequential BFS to avoid thread-pool and atomic overhead.
 const PAR_MIN_NODES: usize = 50_000;
-/// Minimum frontier size to use parallel iteration; below this we process the level sequentially
+/// Minimum frontier size to use parallel iteration; below this we process the level sequentially.
 const PAR_MIN_FRONTIER: usize = 1024;
 
 /// Sequential BFS: returns distance from source for each node (-1 if unreachable).
@@ -33,7 +33,7 @@ pub fn bfs_sequential(graph: &Graph, source: usize) -> Vec<i32> {
     dist
 }
 
-/// Parallel level-synchronous BFS. Falls back to sequential for small graphs; uses threads only when the current frontier is large
+/// Parallel level-synchronous BFS. Falls back to sequential for small graphs; uses threads only when the current frontier is large.
 pub fn bfs_parallel(graph: &Graph, source: usize, num_threads: usize) -> Vec<i32> {
     if graph.num_nodes < PAR_MIN_NODES {
         return bfs_sequential(graph, source);
@@ -107,7 +107,7 @@ fn bfs_parallel_impl(graph: &Graph, source: usize) -> Vec<i32> {
     dist.into_iter().map(|d| d.into_inner()).collect()
 }
 
-/// Prints BFS result: levels and reachable node count
+/// Prints BFS result: levels and reachable node count.
 pub fn print_bfs_result(dist: &[i32], source: usize) {
     println!("\nBFS from node {}:", source);
 

@@ -20,8 +20,7 @@ fn benchmark_wcc(graph_path: &str) {
     };
     
     graph.print_info();
-    
-    // Sequential
+
     print!("Sequential WCC... ");
     std::io::Write::flush(&mut std::io::stdout()).unwrap();
     
@@ -31,8 +30,7 @@ fn benchmark_wcc(graph_path: &str) {
     
     let stats = wcc_stats(&comp_seq);
     println!("{:?} | {} components", time_seq, stats.num_components);
-    
-    // Parallel
+
     for num_threads in [2, 4, 8, 16] {
         print!("Parallel WCC ({} threads)... ", num_threads);
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
